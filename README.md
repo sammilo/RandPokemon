@@ -38,7 +38,7 @@ Here's a video / GIF that demos all of the app's implemented features:
 
 <img src='https://github.com/user-attachments/assets/dcb1a825-ab86-4083-a4a9-058af6148b37' title='Video Demo' width='' alt='Video Demo' />
 
-GIF created with **your chosen GIF tool**
+GIF created with **ScreenToGif**
 
 - [ScreenToGif](https://www.screentogif.com/) for Windows
 
