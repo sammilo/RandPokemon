@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">RandPokemon</string>
+    <string name="buttonName">NEW POKEMON</string>
+    <string name="titleText">PokeDEX</string>
+</resources>
