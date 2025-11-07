@@ -3,35 +3,60 @@ package com.example.randpokemon
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.Button
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
-import com.bumptech.glide.Glide
 import com.codepath.asynchttpclient.AsyncHttpClient
 import com.codepath.asynchttpclient.callback.JsonHttpResponseHandler
 import okhttp3.Headers
-import org.w3c.dom.Text
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import kotlin.random.Random
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var img: ImageView
+    private lateinit var recyclerView: RecyclerView
     private lateinit var pokeBtn: Button
-    private lateinit var typeText: TextView
-    private lateinit var nameText: TextView
+    private lateinit var adapter: PokemonAdapter
+    private val pokemonList = mutableListOf<Pokemon>()
     private val client = AsyncHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        img = findViewById<ImageView>(R.id.pokemonImage)
+        // Initialize button, view, and adapter
         pokeBtn = findViewById<Button>(R.id.pokemonButton)
-        nameText = findViewById<TextView>(R.id.pokemonName)
-        typeText = findViewById<TextView>(R.id.pokemonType)
+        recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
+        adapter = PokemonAdapter(pokemonList)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = adapter
 
+        // Add custom dividers between views
+        val divider = DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
+        val drawable = ContextCompat.getDrawable(this, R.drawable.divider_line)
+        if (drawable != null) {
+            divider.setDrawable(drawable)
+        }
+        recyclerView.addItemDecoration(divider)
+
+        // Load new pokemon set whenever button is clicked
         pokeBtn.setOnClickListener {
-            val randId = Random.nextInt(1,1026)
-            fetchPokemon(randId)
+            loadRandPokemon()
+        }
+        // Load 10 rand pokemon on start-up
+        loadRandPokemon()
+    }
+
+    private fun loadRandPokemon() {
+        pokemonList.clear()
+        adapter.notifyDataSetChanged() // Inform that pokemonList data has changed
+
+        Toast.makeText(this, "Loading Pokémon...", Toast.LENGTH_SHORT).show()
+
+        // Load 10 random pokemon from PokeAPI
+        for (i in 1..10) {
+            val randID = Random.nextInt(1, 1026)
+            fetchPokemon(randID)
         }
     }
 
@@ -40,62 +65,42 @@ class MainActivity : AppCompatActivity() {
 
         client.get(url, object : JsonHttpResponseHandler() {
             override fun onSuccess(
-                statusCode: Int,
+                status: Int,
                 headers: Headers?,
-                json: JsonHttpResponseHandler.JSON
+                json: JSON?
             ) {
-                try {
-                    // Grab pokemon data
-                    val jsonObj = json.jsonObject
+                val jsonObject = json?.jsonObject ?: return
+                val name = jsonObject.getString("name")
+                val imageUrl = jsonObject
+                    .getJSONObject("sprites")
+                    .getString("front_default")
 
-                    // Grab name from json data and capitalize first letter
-                    val name = jsonObj.getString("name").replaceFirstChar { it.uppercase() }
-
-                    // Grab all types
-                    val typesArray = jsonObj.getJSONArray("types")
-
-                    // Save types to array and capitalize first letter of type, ex: "Electric"
-                    val types = mutableListOf<String>()
-                    for (i in 0 until typesArray.length()) {
-                        val typeObj = typesArray.getJSONObject(i)
-                        val typeName = typeObj.getJSONObject("type").getString("name")
-                        types.add(typeName.replaceFirstChar { it.uppercase() })
-                    }
-                    // Add commas between types
-                    val typesString = types.joinToString(", ")
-
-                    // Grab pokemon img, specifically the front facing image
-                    val spriteURL = jsonObj
-                        .getJSONObject("sprites") // get all sprite images
-                        .getString("front_default") // get front image specifically
-
-                    nameText.text = name
-                    typeText.text = "Type(s): $typesString" // Idk how to fix this
-
-                    // Load with Glide
-                    Glide.with(this@MainActivity)
-                        .load(spriteURL)
-                        .placeholder(R.drawable.pokemon)
-                        .into(img)
-
-                } catch (e: Exception) {
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Error pulling Pokémon data",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                val typesArray = jsonObject.getJSONArray("types")
+                val typesList = ArrayList<String>()
+                for (i in 0 until typesArray.length()) {
+                    val typeName =
+                        typesArray.getJSONObject(i)
+                            .getJSONObject("type")
+                            .getString("name")
+                    typesList.add(typeName)
                 }
+
+                val types = typesList.joinToString(", ")
+
+                val pokemon = Pokemon(name, imageUrl, types)
+                pokemonList.add(pokemon)
+                adapter.notifyDataSetChanged()
             }
 
             override fun onFailure(
-                statusCode: Int,
+                status: Int,
                 headers: Headers?,
                 response: String?,
                 throwable: Throwable?
             ) {
                 Toast.makeText(
                     this@MainActivity,
-                    "Failed to load Pokémon. Try again.",
+                    "Failed to load Pokémon (ID: $id)",
                     Toast.LENGTH_SHORT
                 ).show()
             }
